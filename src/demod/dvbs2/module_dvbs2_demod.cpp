@@ -156,7 +156,9 @@ namespace dsp {
         void  DVBS2Demod::setSymbolrate(double symbolrate) {
             assert(base_type::_block_init);
             std::lock_guard<std::recursive_mutex> lck(base_type::ctrlMtx);
-            base_type::tempStop();
+            if(base_type::_in) {
+                base_type::tempStop();
+            }
             // printf("SsamR: %f\n", samplerate);
             d_symbolrate = symbolrate;
             taps::free(rrcTaps);
@@ -164,12 +166,16 @@ namespace dsp {
             recov.setOmega(d_samplerate / d_symbolrate);
             // fll.setSymbolrate(d_symbolrate);
             pll.setSymbolrate(d_symbolrate);
-            base_type::tempStart();
+            if(base_type::_in) {
+                base_type::tempStart();
+            }
         }
         void  DVBS2Demod::setSamplerate(double samplerate) {
             assert(base_type::_block_init);
             std::lock_guard<std::recursive_mutex> lck(base_type::ctrlMtx);
-            base_type::tempStop();
+            if(base_type::_in) {
+                base_type::tempStop();
+            }
             // printf("SsamR: %f\n", samplerate);
             d_samplerate = samplerate;
             taps::free(rrcTaps);
@@ -177,7 +183,9 @@ namespace dsp {
             recov.setOmega(d_samplerate / d_symbolrate);
             // fll.setSamplerate(d_samplerate);
             pll.setSamplerate(d_samplerate);
-            base_type::tempStart();
+            if(base_type::_in) {
+                base_type::tempStart();
+            }
         }
 
         int DVBS2Demod::process(int count, const complex_t* in, uint8_t* out) {

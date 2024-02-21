@@ -115,8 +115,8 @@ public:
         strcpy(hostname, std::string(config.conf[name]["hostname"]).c_str());
         port = config.conf[name]["port"];
         bool startNow = config.conf[name]["sending"];
-        dvbs_sym_rate = config.conf[name]["dvbs_symrate"];
-        dvbs2_sym_rate =  config.conf[name]["dvbs2_symrate"];
+        dvbs_sym_rate_disp = dvbs_sym_rate = config.conf[name]["dvbs_symrate"];
+        dvbs2_sym_rate_disp = dvbs2_sym_rate =  config.conf[name]["dvbs2_symrate"];
         dvbs2_cfg.constellation = config.conf[name]["dvbs2_constellation"];
         dvbs2_cfg.coderate = config.conf[name]["dvbs2_coderate"];
         dvbs2_cfg.framesize = config.conf[name]["dvbs2_framesize"];
@@ -219,8 +219,11 @@ private:
             if(dvbs_bw >= dvbs_sym_rate*2.0f) {
                 dvbs_bw = dvbs_sym_rate*2.0f;
             }
+            if(dvbs_bw <= dvbs_sym_rate/2.0f) {
+                dvbs_bw = dvbs_sym_rate/2.0f;
+            }
             vfo->setSampleRate(dvbs_sym_rate*2.0f, dvbs_bw);
-            vfo->setBandwidthLimits(1000.0f, dvbs_sym_rate*2.5f, false);
+            vfo->setBandwidthLimits(dvbs_sym_rate/2.0f, dvbs_sym_rate*2.5f, false);
             dvbsDemod.setSamplerate(dvbs_sym_rate*2);
             dvbsDemod.setSymbolrate(dvbs_sym_rate);
             dvbsDemod.reset();
@@ -228,8 +231,11 @@ private:
             if(dvbs2_bw >= dvbs2_sym_rate*2.0f) {
                 dvbs2_bw = dvbs2_sym_rate*2.0f;
             }
+            if(dvbs2_bw <= dvbs2_sym_rate/2.0f) {
+                dvbs2_bw = dvbs2_sym_rate/2.0f;
+            }
             vfo->setSampleRate(dvbs2_sym_rate*2.0f, dvbs2_bw);
-            vfo->setBandwidthLimits(1000.0f, dvbs2_sym_rate*2.5f, false);
+            vfo->setBandwidthLimits(dvbs2_sym_rate/2.0f, dvbs2_sym_rate*2.5f, false);
             dvbs2Demod.setSamplerate(dvbs2_sym_rate*2);
             dvbs2Demod.setSymbolrate(dvbs2_sym_rate);
             dvbs2Demod.reset();
@@ -321,7 +327,10 @@ private:
             ImGui::Text("Symbol rate: ");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-            if (ImGui::InputInt(CONCAT("##_dvbsdemod_rate_", _this->name), &(_this->dvbs_sym_rate), 1, 10)) {
+            if (ImGui::InputInt(CONCAT("##_dvbsdemod_rate_", _this->name), &(_this->dvbs_sym_rate_disp), 1, 10)) {
+            }
+            if (ImGui::Button(CONCAT("Apply##_dvbsdemod_rate_a_", _this->name))) {
+                _this->dvbs_sym_rate = _this->dvbs_sym_rate_disp;
                 if(_this->dvbs_sym_rate > 0) {
                     _this->setSymRate();
                 }
@@ -358,7 +367,11 @@ private:
             ImGui::Text("Symbol rate: ");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-            if (ImGui::InputInt(CONCAT("##_dvbs2demod_rate_", _this->name), &(_this->dvbs2_sym_rate), 1, 10)) {
+            if (ImGui::InputInt(CONCAT("##_dvbs2demod_rate_", _this->name), &(_this->dvbs2_sym_rate_disp), 1, 10)) {
+                
+            }
+            if (ImGui::Button(CONCAT("Apply##_dvbs2demod_rate_a_", _this->name))) {
+                _this->dvbs2_sym_rate = _this->dvbs2_sym_rate_disp;
                 if(_this->dvbs2_sym_rate > 0) {
                     _this->setSymRate();
                 }
@@ -608,11 +621,13 @@ private:
     ImGui::ConstellationDiagram constDiag;
 
     int dvbs_sym_rate = 250000;
+    int dvbs_sym_rate_disp = 250000;
     dsp::dvbs::DVBSDemod dvbsDemod;
     float dvbs_viterbi_err_avg[30];
     int dvbs_viterbi_err_avg_ptr = 0;
 
     int dvbs2_sym_rate = 250000;
+    int dvbs2_sym_rate_disp = 250000;
     dsp::dvbs2::dvb_cgf_holder dvbs2_cfg;
     dsp::dvbs2::DVBS2Demod dvbs2Demod;
     float dvbs2_pl_best_avg[30];

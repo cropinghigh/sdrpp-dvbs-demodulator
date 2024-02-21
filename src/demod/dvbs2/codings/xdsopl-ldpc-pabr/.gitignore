@@ -1,0 +1,4 @@
+/testbench
+*.o
+a.out
+.*.swp

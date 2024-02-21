@@ -491,7 +491,6 @@ private:
                     ImGui::SameLine();
                     ImGui::SigQualityMeter(100.0f*((float)_this->dvbs2bbparser.last_bb_proc)/((float)_this->dvbs2bbparser.last_bb_cnt), 0.0f, 100.0f);
                 }
-                ImGui::Text("BBF TS CRC errors: %d", _this->dvbs2bbparser.last_ts_errs);
             } else {
                 ImGui::Text("BCH sig quality: %d", int(_this->dvbs2_avg_bchcorr));
                 ImGui::SameLine();
@@ -502,7 +501,6 @@ private:
                     ImGui::SameLine();
                     ImGui::SigQualityMeter(100.0f*((float)_this->dvbs2bbparser.last_bb_proc)/((float)_this->dvbs2bbparser.last_bb_cnt), 0.0f, 100.0f);
                 }
-                ImGui::Text("BBF TS CRC errors: %d", _this->dvbs2bbparser.last_ts_errs);
                 ImGui::Text("BBFrame content: %s", (_this->dvbs2bbparser.last_header.ts_gs == 0b11 ? "MPEGTS" : (_this->dvbs2bbparser.last_header.ts_gs == 0b01 ? "GSE" : "UNK")));
                 ImGui::Text("Input stream: %s", (_this->dvbs2bbparser.last_header.sis_mis ? "Single" : "Multiple"));
                 ImGui::Text("Cod&Mod: %s", (_this->dvbs2bbparser.last_header.ccm_acm ? "CCM" : "ACM"));
@@ -569,19 +567,22 @@ private:
             //         }
             //     }
             // }
-            int cnt = _this->dvbs2bbparser.work(data, count/(_this->dvbs2Demod.getKBCH()/8), _this->packetbuff, 65536);
+            int cnt = _this->dvbs2bbparser.work(data, count/(_this->dvbs2Demod.getKBCH()/8), _this->packetbuff, 65536*10);
             if(_this->dvbs2bbparser.last_header.ts_gs == 0b11) {
                 //MPEGTS
-                // if(cnt > 0 && (cnt%188)==0) {
-                //     for(int k = 0; k < cnt/188; k++) {
-                //         if(_this->conn && _this->conn->isOpen())
-                //             _this->conn->send(&_this->packetbuff[188*k], 188);
-                //     }
-                // }
-                if(cnt > 0) {
-                    if(_this->conn && _this->conn->isOpen()) 
-                        _this->conn->send(_this->packetbuff, cnt);
+                if(cnt > 0 && (cnt%188)==0) {
+                    for(int k = 0; k < cnt/1880; k++) {
+                        if(_this->conn && _this->conn->isOpen())
+                            _this->conn->send(&_this->packetbuff[1880*k], 1880);
+                    }
+                    int rem = cnt%1880;
+                    if(rem != 0 && _this->conn && _this->conn->isOpen())
+                            _this->conn->send(&_this->packetbuff[cnt-rem], rem);
                 }
+                // if(cnt > 0) {
+                    // if(_this->conn && _this->conn->isOpen()) 
+                        // _this->conn->send(_this->packetbuff, cnt);
+                // }
             } else {
                 //GSE/OTHER
                 if(cnt > 0) {
@@ -639,7 +640,7 @@ private:
     int dvbs2_modcod_checkbuff_ptr = 0;
     bool auto_modcod = false;
     dsp::dvbs2::BBFrameTSParser dvbs2bbparser;
-    uint8_t packetbuff[65536];
+    uint8_t packetbuff[65536*10];
 
     dsp::sink::Handler<uint8_t> demodSink;
 

@@ -115,6 +115,7 @@ public:
         strcpy(hostname, std::string(config.conf[name]["hostname"]).c_str());
         port = config.conf[name]["port"];
         bool startNow = config.conf[name]["sending"];
+        dvbs_ver_selected = config.conf[name]["dvbs_version"];
         dvbs_sym_rate_disp = dvbs_sym_rate = config.conf[name]["dvbs_symrate"];
         dvbs2_sym_rate_disp = dvbs2_sym_rate =  config.conf[name]["dvbs2_symrate"];
         dvbs2_cfg.constellation = config.conf[name]["dvbs2_constellation"];

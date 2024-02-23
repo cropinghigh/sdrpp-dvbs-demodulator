@@ -26,7 +26,7 @@
 
 #include "bch/bose_chaudhuri_hocquenghem_decoder.hh"
 #include "bch/galois_field.hh"
-#include "common/codings/dvb-s2/dvbs2.h"
+#include "dvbs2/dvbs2.h"
 #include <cstdint>
 #include <bitset>
 

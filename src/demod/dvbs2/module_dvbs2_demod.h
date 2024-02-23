@@ -31,7 +31,12 @@
 
 #include "common/dsp/demod/constellation.h"
 
-#include "symbol_extractor.h"
+#include "common/dsp/demod/fll.h"
+#include "common/dsp/demod/freq_shift.h"
+#include "common/dsp/demod/complex_fd.h"
+#include "common/dsp/demod/gardner.h"
+#include "dvbs2_fed.h"
+#include "dvbs2_plhdr_demod.h"
 
 // #include "common/widgets/constellation_s2.h"
 // #include "common/widgets/value_plot.h"
@@ -46,9 +51,9 @@ namespace dsp {
             using base_type = Processor<complex_t, uint8_t>;
         public:
             DVBS2Demod() {}
-            DVBS2Demod(stream<complex_t>* in, double symbolrate, double samplerate, float agc_rate, float rrc_alpha, int rrc_taps, float loop_bw, float fll_bw, double omegaGain, double muGain, void (*handler)(complex_t* data, int count, void* ctx), void* ctx, int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials, float freq_prop_factor, double omegaRelLimit = 0.01) { init(in,  symbolrate, samplerate, agc_rate, rrc_alpha, rrc_taps, loop_bw, fll_bw, omegaGain, muGain, handler, ctx, modcod, shortframes, pilots, sof_thresold, max_ldpc_trials, freq_prop_factor, omegaRelLimit); }
+            DVBS2Demod(stream<complex_t>* in, double symbolrate, double samplerate, float agc_rate, float rrc_alpha, int rrc_taps, float loop_bw, float fll_bw, double omegaGain, double muGain, void (*handler)(complex_t* data, int count, void* ctx), void* ctx, int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials, double omegaRelLimit = 0.01) { init(in,  symbolrate, samplerate, agc_rate, rrc_alpha, rrc_taps, loop_bw, fll_bw, omegaGain, muGain, handler, ctx, modcod, shortframes, pilots, sof_thresold, max_ldpc_trials, omegaRelLimit); }
             ~DVBS2Demod();
-            void init(stream<complex_t>* in, double symbolrate, double samplerate, float agc_rate, float rrc_alpha, int rrc_taps, float loop_bw, float fll_bw, double omegaGain, double muGain, void (*handler)(complex_t* data, int count, void* ctx), void* ctx, int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials, float freq_prop_factor, double omegaRelLimit = 0.01);
+            void init(stream<complex_t>* in, double symbolrate, double samplerate, float agc_rate, float rrc_alpha, int rrc_taps, float loop_bw, float fll_bw, double omegaGain, double muGain, void (*handler)(complex_t* data, int count, void* ctx), void* ctx, int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials, double omegaRelLimit = 0.01);
             void reset();
 
             void setDemodParams(int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials);
@@ -84,11 +89,13 @@ namespace dsp {
             // loop::FLL fll;
             tap<float> rrcTaps;
             loop::FastAGC<complex_t> agc;
+            FreqShift freqShift;
             filter::FIR<complex_t, float> rrc;
-            loop::EXT_PLL pll;
             // clock_recovery::MM<complex_t> recov; //works worse than FD
             clock_recovery::COMPLEX_FD recov;
+            // clock_recovery::Gardner recov;
             dvbs2::S2PLSyncBlock pl_sync;
+            dvbs2::S2PLHDRDemod plhdr_demod;
             dvbs2::S2PLLBlock s2_pll;
             dvbs2::S2BBToSoft s2_bb_to_soft;
 
@@ -107,7 +114,6 @@ namespace dsp {
             float d_symbolrate;
             float d_samplerate;
             float d_agcr;
-            float d_freqprop;
 
     // This default will NOT work for 32-APSK, maybe we should tune per-requirements?
     #define REC_ALPHA 1.7e-3
@@ -135,6 +141,10 @@ namespace dsp {
             dvbs2::BBFrameLDPC* ldpc_decoder;
             dvbs2::BBFrameBCH* bch_decoder;
             dvbs2::BBFrameDescrambler* descramber;
+
+            dvbs2::s2_sof sof;
+            dvbs2::s2_plscodes pls;
+            dvbs2::S2Scrambling scrambler;
 
         };
     }

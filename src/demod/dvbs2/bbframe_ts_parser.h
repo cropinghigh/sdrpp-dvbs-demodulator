@@ -24,7 +24,7 @@
  */
 
 #include <cstdint>
-#include "common/codings/dvb-s2/dvbs2.h"
+#include "dvbs2.h"
 #include <dsp/stream.h>
 #include <cstdio>
 

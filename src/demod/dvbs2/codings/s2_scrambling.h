@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <dsp/types.h>
-#include "common/codings/dvb-s2/dvbs2.h"
+#include "dvbs2/dvbs2.h"
 
 /*
 Adapted from LeanDVB
@@ -34,6 +34,7 @@ namespace dsp {
             ~S2Scrambling();
 
             void reset();
+            void setPos(int newpos) { pos = newpos; }
             complex_t descramble(complex_t &sample);
             complex_t scramble(complex_t &sample);
         };

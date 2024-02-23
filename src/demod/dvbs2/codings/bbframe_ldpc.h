@@ -4,7 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <complex>
-#include "common/codings/dvb-s2/dvbs2.h"
+#include "dvbs2/dvbs2.h"
 
 typedef int8_t code_type;
 

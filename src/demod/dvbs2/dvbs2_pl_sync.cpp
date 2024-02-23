@@ -8,7 +8,9 @@ namespace dsp {
             delete[] correlation_buffer;
         }
 
-        void S2PLSyncBlock::init(stream<complex_t>* input, int slot_num, bool pilots) {
+        void S2PLSyncBlock::init(stream<complex_t>* input, int slot_num, bool pilots, s2_sof* esof, s2_plscodes* epls) {
+            sof = esof;
+            pls = epls;
             slot_number = slot_num;
 
             raw_frame_size = (slot_number + 1) * 90; // PL (90 Symbols) + slots of 90 symbols
@@ -25,7 +27,7 @@ namespace dsp {
 
                 raw_frame_size += pilot_cnt * 36;
 
-                flog::info("Pilots size (PLSYNC) : %d", raw_frame_size);
+                flog::info("Pilots size (PLSYNC) : {0}", raw_frame_size);
             }
 
             correlation_buffer = new complex_t[raw_frame_size];
@@ -64,7 +66,7 @@ namespace dsp {
 
                 raw_frame_size += pilot_cnt * 36;
 
-                flog::info("Pilots size (PLSYNC) : %d", raw_frame_size);
+                flog::info("Pilots size (PLSYNC) : {0}", raw_frame_size);
             }
             delete[] correlation_buffer;
             correlation_buffer = new complex_t[raw_frame_size];
@@ -95,18 +97,18 @@ namespace dsp {
                 best_match = 0;
                 complex_t best_match_raw = {0, 0};
 
-                complex_t plheader_symbols[sof.LENGTH + pls.LENGTH];
+                complex_t plheader_symbols[sof->LENGTH + pls->LENGTH];
 
-                for (int ss = 0; ss < raw_frame_size - sof.LENGTH - pls.LENGTH; ss++) {
+                for (int ss = 0; ss < raw_frame_size - sof->LENGTH - pls->LENGTH; ss++) {
 
                     plheader_symbols[0] = {0, 0};
-                    volk_32fc_conjugate_32fc((lv_32fc_t *)&plheader_symbols[1], (lv_32fc_t *)&correlation_buffer[ss], sof.LENGTH + pls.LENGTH - 1);
-                    volk_32fc_x2_multiply_32fc((lv_32fc_t *)plheader_symbols, (lv_32fc_t *)plheader_symbols, (lv_32fc_t *)&correlation_buffer[ss], sof.LENGTH + pls.LENGTH);
+                    volk_32fc_conjugate_32fc((lv_32fc_t *)&plheader_symbols[1], (lv_32fc_t *)&correlation_buffer[ss], sof->LENGTH + pls->LENGTH - 1);
+                    volk_32fc_x2_multiply_32fc((lv_32fc_t *)plheader_symbols, (lv_32fc_t *)plheader_symbols, (lv_32fc_t *)&correlation_buffer[ss], sof->LENGTH + pls->LENGTH);
 
                     double difference = 0;
 
                     complex_t csof = correlate_sof_diff(plheader_symbols);
-                    complex_t cplsc = correlate_plscode_diff(&plheader_symbols[sof.LENGTH]);
+                    complex_t cplsc = correlate_plscode_diff(&plheader_symbols[sof->LENGTH]);
                     complex_t c0 = csof + cplsc; // Best when b7==0 (pilots off)
                     complex_t c1 = csof - cplsc; // Best when b7==1 (pilots on)
                     complex_t c = c0.amplitude() > c1.amplitude() ? c0 : c1;
@@ -150,13 +152,13 @@ skip_slow_corr:
 
         complex_t S2PLSyncBlock::correlate_sof_diff(complex_t *diffs) {
             complex_t c = {0, 0};
-            const uint32_t dsof = sof.VALUE ^ (sof.VALUE >> 1);
-            for (int i = 0; i < sof.LENGTH; ++i) {
+            const uint32_t dsof = sof->VALUE ^ (sof->VALUE >> 1);
+            for (int i = 0; i < sof->LENGTH; ++i) {
                 // Constant  odd bit => +PI/4
                 // Constant even bit => -PI/4
                 // Toggled   odd bit => -PI/4
                 // Toggled  even bit => +PI/4
-                if (((dsof >> (sof.LENGTH - 1 - i)) ^ i) & 1)
+                if (((dsof >> (sof->LENGTH - 1 - i)) ^ i) & 1)
                     c += diffs[i];
                 else
                     c -= diffs[i];
@@ -166,9 +168,9 @@ skip_slow_corr:
 
         complex_t S2PLSyncBlock::correlate_plscode_diff(complex_t *diffs) {
             complex_t c = {0, 0};
-            uint64_t dscr = pls.SCRAMBLING ^ (pls.SCRAMBLING >> 1);
-            for (int i = 1; i < pls.LENGTH; i += 2) {
-                if ((dscr >> (pls.LENGTH - 1 - i)) & 1)
+            uint64_t dscr = pls->SCRAMBLING ^ (pls->SCRAMBLING >> 1);
+            for (int i = 1; i < pls->LENGTH; i += 2) {
+                if ((dscr >> (pls->LENGTH - 1 - i)) & 1)
                     c -= diffs[i];
                 else
                     c += diffs[i];

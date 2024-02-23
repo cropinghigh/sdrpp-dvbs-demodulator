@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "common/codings/dvb-s2/dvbs2.h"
+#include "dvbs2/dvbs2.h"
 
 namespace dsp {
     namespace dvbs2

@@ -16,7 +16,6 @@ namespace dsp {
         class S2BBToSoft : public Processor<complex_t, int8_t> {
             using base_type = Processor<complex_t, int8_t>;
         public:
-            void reset();
             int process(int count, complex_t* in, int8_t* out);
 
             int run() {
@@ -33,30 +32,12 @@ namespace dsp {
                 return outCount;
             }
 
-            int detect_modcod;
-            bool detect_shortframes;
-            bool detect_pilots;
-
             bool pilots = false;
 
             int frame_slot_count;
             std::shared_ptr<dsp::constellation_t> constellation;
             std::shared_ptr<dvbs2::S2Deinterleaver> deinterleaver;
         private:
-            int checkSyncMarker(uint64_t marker, uint64_t totest) {
-                int errors = 0;
-                for (int i = 59; i >= 0; i--) {
-                    bool markerBit, testBit;
-                    markerBit = getBit<uint64_t>(marker, i);
-                    testBit = getBit<uint64_t>(totest, i);
-                    if (markerBit != testBit)
-                        errors++;
-                }
-                return errors;
-            }
-
-            s2_plscodes pls;
-            dvbs2::S2Scrambling descrambler;
 
             int8_t soft_slots_buffer[64800];
 

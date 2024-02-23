@@ -3,8 +3,8 @@
 #define TEST_BITS_LENGTH 2048 // 1024 QPSK symbols
 
 #include "common/codings/rotation.h"
-#include "common/codings/viterbi/cc_decoder.h"
-#include "common/codings/viterbi/cc_encoder.h"
+#include "cc_decoder.h"
+#include "cc_encoder.h"
 #include "depunc.h"
 #include <memory>
 

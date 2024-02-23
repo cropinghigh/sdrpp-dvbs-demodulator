@@ -12,9 +12,9 @@ namespace dsp {
             using base_type = Processor<complex_t, complex_t>;
         public:
             S2PLSyncBlock() {}
-            S2PLSyncBlock(stream<complex_t>* input, int slot_num, bool pilots) { init(input, slot_num, pilots);}
+            S2PLSyncBlock(stream<complex_t>* input, int slot_num, bool pilots, s2_sof* sof, s2_plscodes* pls) { init(input, slot_num, pilots, sof, pls);}
             ~S2PLSyncBlock();
-            void init(stream<complex_t>* input, int slot_num, bool pilots);
+            void init(stream<complex_t>* input, int slot_num, bool pilots, s2_sof* sof, s2_plscodes* pls);
             void reset();
             void setParams(int slot_num, bool pilots);
             int process(int count, complex_t* in, complex_t* out);
@@ -42,8 +42,8 @@ namespace dsp {
             // float freq = 0;
 
         private:
-            s2_sof sof;
-            s2_plscodes pls;
+            s2_sof* sof;
+            s2_plscodes* pls;
 
             int internal_process(complex_t* out);
 

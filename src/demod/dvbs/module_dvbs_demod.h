@@ -10,7 +10,7 @@
 #include "dvbs_scrambling.h"
 #include "dvbs_defines.h"
 #include <dsp/demod/psk.h>
-#include "symbol_extractor.h"
+#include "common/dsp/demod/qpsk_alt.h"
 #include <math.h>
 
 namespace dsp {

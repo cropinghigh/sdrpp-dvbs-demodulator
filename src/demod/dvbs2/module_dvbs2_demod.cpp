@@ -4,7 +4,7 @@
 
 namespace dsp {
     namespace dvbs2 {
-        void DVBS2Demod::init(stream<complex_t>* in, double symbolrate, double samplerate, float agc_rate, float rrc_alpha, int rrc_taps, float loop_bw, float fll_bw, double omegaGain, double muGain, void (*handler)(complex_t* data, int count, void* ctx), void* ctx, int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials, float freq_prop_factor, double omegaRelLimit) {
+        void DVBS2Demod::init(stream<complex_t>* in, double symbolrate, double samplerate, float agc_rate, float rrc_alpha, int rrc_taps, float loop_bw, float fll_bw, double omegaGain, double muGain, void (*handler)(complex_t* data, int count, void* ctx), void* ctx, int modcod, bool shortframes, bool pilots, float sof_thresold, int max_ldpc_trials, double omegaRelLimit) {
             // Parse params
             d_symbolrate = symbolrate;
             d_samplerate = samplerate;
@@ -24,7 +24,6 @@ namespace dsp {
             d_pilots = pilots;
             d_sof_thresold = sof_thresold;
             d_max_ldpc_trials = max_ldpc_trials;
-            d_freqprop = freq_prop_factor;
 
             float g1 = 0, g2 = 0;
 
@@ -41,17 +40,22 @@ namespace dsp {
 
             // fll.init(NULL, d_fll_bw, d_symbolrate, d_samplerate, d_rrc_taps, d_rrc_alpha, 0, -FL_M_PI/2.0f, FL_M_PI/2.0f);
             rrcTaps = taps::rootRaisedCosine<float>(d_rrc_taps, d_rrc_alpha, d_symbolrate, d_samplerate);
+            // rrcTaps = taps::rootRaisedCosine<float>(d_rrc_taps, d_rrc_alpha, d_symbolrate, d_symbolrate);
             rrc.init(NULL, rrcTaps);
             agc.init(NULL, 1.0, 10e6, d_agcr);
-            pll.init(NULL, d_fll_bw, d_symbolrate, d_samplerate, d_rrc_taps, d_rrc_alpha, 0, -FL_M_PI/2.0f, FL_M_PI/2.0f);
-            recov.init(NULL, d_samplerate / d_symbolrate,  d_clock_gain_omega, d_clock_gain_mu, d_clock_omega_relative_limit);
+            freqShift.init(NULL);
+            // pll.init(NULL, d_fll_bw, d_symbolrate, d_samplerate, d_rrc_taps, d_rrc_alpha, 0, -FL_M_PI/2.0f, FL_M_PI/2.0f);
+            recov.init(NULL, d_samplerate / d_symbolrate,  d_clock_gain_omega, d_clock_gain_mu, d_clock_omega_relative_limit, 1);
+            // recov.init(NULL, d_symbolrate / d_symbolrate,  d_clock_gain_omega, d_clock_gain_mu, d_clock_omega_relative_limit, 2);
 
             // PL (SOF) Synchronization
-            pl_sync.init(NULL, frame_slot_count, d_pilots);
+            pl_sync.init(NULL, frame_slot_count, d_pilots, &sof, &pls);
             pl_sync.thresold = d_sof_thresold;
 
+            plhdr_demod.init(NULL, d_loop_bw*4.0f, &sof, &pls);
+
             // PLL
-            s2_pll.init(NULL, d_loop_bw);
+            s2_pll.init(NULL, d_loop_bw, &sof, &pls, &scrambler);
             s2_pll.pilots = d_pilots;
             s2_pll.constellation = std::make_shared<dsp::constellation_t>(s2_constel_obj_type, g1, g2);
             s2_pll.constellation->make_lut(256);
@@ -74,8 +78,10 @@ namespace dsp {
 
             rrc.out.free();
             agc.out.free();
+            freqShift.out.free();
             recov.out.free();
             pl_sync.out.free();
+            plhdr_demod.out.free();
             s2_pll.out.free();
             s2_bb_to_soft.out.free();
 
@@ -93,11 +99,14 @@ namespace dsp {
             // fll.reset();
             rrc.reset();
             agc.reset();
-            pll.reset();
+            freqShift.curr_freq = 0;
+            freqShift.curr_phase = 0;
+            // pll.reset();
             recov.reset();
             pl_sync.reset();
+            plhdr_demod.reset();
             s2_pll.reset();
-            s2_bb_to_soft.reset();
+            // s2_bb_to_soft.reset();
             base_type::tempStart();
         }
 
@@ -163,14 +172,19 @@ namespace dsp {
             d_symbolrate = symbolrate;
             taps::free(rrcTaps);
             rrcTaps = taps::rootRaisedCosine<float>(d_rrc_taps, d_rrc_alpha, d_symbolrate, d_samplerate);
+            // rrcTaps = taps::rootRaisedCosine<float>(d_rrc_taps, d_rrc_alpha, d_symbolrate, d_symbolrate);
+            rrc.setTaps(rrcTaps);
             recov.setOmega(d_samplerate / d_symbolrate);
+            // recov.setOmega(d_symbolrate / d_symbolrate);
+            freqShift.curr_freq = 0;
             // fll.setSymbolrate(d_symbolrate);
-            pll.setSymbolrate(d_symbolrate);
+            // pll.setSymbolrate(d_symbolrate);
             if(base_type::_in) {
                 base_type::tempStart();
             }
         }
-        void  DVBS2Demod::setSamplerate(double samplerate) {
+
+        void DVBS2Demod::setSamplerate(double samplerate) {
             assert(base_type::_block_init);
             std::lock_guard<std::recursive_mutex> lck(base_type::ctrlMtx);
             if(base_type::_in) {
@@ -180,9 +194,13 @@ namespace dsp {
             d_samplerate = samplerate;
             taps::free(rrcTaps);
             rrcTaps = taps::rootRaisedCosine<float>(d_rrc_taps, d_rrc_alpha, d_symbolrate, d_samplerate);
+            // rrcTaps = taps::rootRaisedCosine<float>(d_rrc_taps, d_rrc_alpha, d_symbolrate, d_symbolrate);
+            rrc.setTaps(rrcTaps);
             recov.setOmega(d_samplerate / d_symbolrate);
+            // recov.setOmega(d_symbolrate / d_symbolrate);
+            freqShift.curr_freq = 0;
             // fll.setSamplerate(d_samplerate);
-            pll.setSamplerate(d_samplerate);
+            // pll.setSamplerate(d_samplerate);
             if(base_type::_in) {
                 base_type::tempStart();
             }
@@ -193,21 +211,40 @@ namespace dsp {
             int outcnt = 0;
             // std::fstream file;
             ret = agc.process(ret, (complex_t*) in, tmp);
+            ret = freqShift.process(ret, tmp, tmp);
             // ret = fll.process(ret, tmp, tmp);
             // file.open("test.bin", std::ios::app | std::ios::binary);
             // file.write(reinterpret_cast<const char*>(tmp), ret * sizeof(complex_t));
             // file.close();
 
-            ret = pll.process(ret, tmp, tmp);
+            // ret = pll.process(ret, tmp, tmp);
             ret = rrc.process(ret, tmp, tmp2);
             ret = recov.process(ret, tmp2, tmp);
 
+            // for(int i = 0; i < ret; i+=2) {
+            //     tmp[i/2] = tmp[i];
+            // }
+            // ret = ret/2; //external decimator. Needed to make it handle larger CF offsets
 
             ret = pl_sync.process(ret, tmp, tmp2);
 
             pl_sync_best_match = pl_sync.best_match;
             for(int curfr = 0; curfr < ret/(pl_sync.raw_frame_size); curfr++) {
-                int lret = s2_pll.process(ret, &tmp2[curfr*pl_sync.raw_frame_size], tmp); //INCLUDES FREQ CORRECTION INSIDE; MAY CONFLICT WITH FLL!
+                float est_coarse_fr_err = dvbs2_pilot_coarse_fed(&tmp2[curfr*pl_sync.raw_frame_size], pl_sync.raw_frame_size, d_pilots, s2_pll.pls_code, sof, pls, &scrambler);
+                // printf("ERR=%f   CUR_FR=%f \n", est_coarse_fr_err, freqShift.curr_freq);
+                if(std::abs(est_coarse_fr_err) < 0.02) {
+                    freqShift.curr_freq = freqShift.curr_freq + est_coarse_fr_err * (d_fll_bw/100.0f);
+                } else {
+                    freqShift.curr_freq = freqShift.curr_freq + est_coarse_fr_err * d_fll_bw;
+                }
+                if(freqShift.curr_freq > 0.3f*FL_M_PI) {
+                    freqShift.curr_freq = 0.3f*FL_M_PI;
+                }
+                if(freqShift.curr_freq < -0.3f*FL_M_PI) {
+                    freqShift.curr_freq = -0.3f*FL_M_PI;
+                }
+                int lret = s2_pll.process(pl_sync.raw_frame_size, &tmp2[curfr*pl_sync.raw_frame_size], tmp);
+                lret = plhdr_demod.process(pl_sync.raw_frame_size, &tmp2[curfr*pl_sync.raw_frame_size], tmp);
                 lret = s2_bb_to_soft.process(lret, tmp, tmp_frame);
 
                 // Push into constellation
@@ -216,11 +253,11 @@ namespace dsp {
                 d_handler(&tmp[0], (frame_slot_count + 1) * 90 + s2_pll.pilot_cnt * 36, d_ctx);
 
 
-                pll.ext_advance(s2_pll.getFreq() * d_freqprop);
+                // pll.ext_advance(s2_pll.getFreq() * d_freqprop);
 
-                detected_modcod = s2_bb_to_soft.detect_modcod;
-                detected_shortframes = s2_bb_to_soft.detect_shortframes;
-                detected_pilots = s2_bb_to_soft.detect_pilots;
+                detected_modcod = plhdr_demod.detect_modcod;
+                detected_shortframes = plhdr_demod.detect_shortframes;
+                detected_pilots = plhdr_demod.detect_pilots;
 
                 memcpy(&simd_packer[simd_packer_ptr], tmp_frame, d_shortframes ? 16200 : 64800);
                 simd_packer_ptr += d_shortframes ? 16200 : 64800;

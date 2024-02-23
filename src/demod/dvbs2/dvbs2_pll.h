@@ -3,6 +3,9 @@
 #include <dsp/processor.h>
 #include "s2_defs.h"
 #include "common/dsp/demod/constellation.h"
+#include "dvbs2/codings/s2_scrambling.h"
+#include <dsp/loop/phase_control_loop.h>
+#include <dsp/math/phasor.h>
 
 /*
 DVB-S2 PLL, meant to frequency & phase-recover
@@ -14,8 +17,8 @@ namespace dsp {
             using base_type = Processor<complex_t, complex_t>;
         public:
             S2PLLBlock() {}
-            S2PLLBlock(stream<complex_t>* in, float loop_bw) { init(in, loop_bw);}
-            void init(stream<complex_t>* in, float loop_bw);
+            S2PLLBlock(stream<complex_t>* in, float loop_bw, s2_sof* sof, s2_plscodes* pls, dvbs2::S2Scrambling* descrambler) { init(in, loop_bw, sof, pls, descrambler);}
+            void init(stream<complex_t>* in, float loop_bw, s2_sof* sof, s2_plscodes* pls, dvbs2::S2Scrambling* descrambler);
             void reset();
             void setParams(float loop_bw);
 
@@ -35,8 +38,7 @@ namespace dsp {
                 return outCount;
             }
 
-            float getFreq() { return freq; }
-            float getPh() { return phase; }
+            float getFreq() { return pcl.freq; }
 
             int pls_code;
             int frame_slot_count;
@@ -64,11 +66,11 @@ namespace dsp {
             float error = 0;
 
         private:
-            float phase = 0, freq = 0;
-            float alpha, beta;
+            loop::PhaseControlLoop<float> pcl;
 
-            s2_sof sof;
-            s2_plscodes pls;
+            dvbs2::S2Scrambling* descrambler;
+            s2_sof* sof;
+            s2_plscodes* pls;
 
             complex_t tmp_val;
 

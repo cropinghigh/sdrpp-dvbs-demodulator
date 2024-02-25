@@ -76,13 +76,23 @@ namespace dsp {
             base_type::tempStart();
         }
 
+        // int test = 0;
+
         int S2PLSyncBlock::process(int count, complex_t* in, complex_t* out) {
             int outcnt = 0;
             for(int i = 0; i < count; i++) {
                 in_buffer[in_buffer_ptr] = in[i];
+                // test++;
                 in_buffer_ptr++;
                 if(in_buffer_ptr >= in_buffer_lim) {
-                    outcnt += internal_process(&out[outcnt]);
+                    int ret = internal_process(&out[outcnt]);
+                    outcnt += ret;
+                    // if(ret != 0) {
+                    //     // printf("FR GOT: %d/%d\n", test, raw_frame_size);
+                    //     // test = 0;
+                    // } else {
+                    //     // printf("FR MID: %d\n", test);
+                    // }
                     in_buffer_ptr = 0;
                 }
             }
@@ -115,6 +125,10 @@ namespace dsp {
                     complex_t d = c * (1.0f / (26 - 1 + 64 / 2));
 
                     difference = d.amplitude();
+                    
+                    // if(ss < 10) {
+                    //     // printf("DIFF=%f, IM=%f\n", difference, d.im);
+                    // }
 
                     if (difference > best_match && d.im > 0) {
                         best_match = difference;
@@ -124,12 +138,12 @@ namespace dsp {
                         current_position = best_pos;
 
                         if (difference > thresold) {
-                            goto skip_slow_corr;
+                            // break;
                         }
                     }
                 }
-skip_slow_corr:
                 if (best_pos != 0 && best_pos < raw_frame_size) { // Safety
+                    // printf("BEST FRAME SHIFT: %d, MATCH: %f\n", best_pos, best_match);
                     in_buffer_lim = best_pos;
                     in_buffer_state = 1; //gather another pos symbols
                     return 0;

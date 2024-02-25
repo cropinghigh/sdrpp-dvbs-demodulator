@@ -6,8 +6,8 @@ namespace dsp {
             sof = esof;
             pls = epls;
             float alpha, beta;
-            loop::PhaseControlLoop<float>::criticallyDamped(loop_bw, alpha, beta);
-            pcl.init(alpha, beta, 0, -FL_M_PI, FL_M_PI, 0, -0.2f*FL_M_PI, 0.2f*FL_M_PI);
+            loop::PhaseControlLoop<float>::criticallyDamped(loop_bw*0.03f, alpha, beta);
+            pcl.init(alpha, beta, 0, -FL_M_PI, FL_M_PI, 0, -1.0f*FL_M_PI, 1.0f*FL_M_PI);
             base_type::init(in);
         }
 
@@ -34,15 +34,12 @@ namespace dsp {
             for(int i = 0; i < 90; i++) {
                 complex_t tmp_val = in[i] * math::phasor(-pcl.phase);
                 float error = 0;
-                if (i < 26) // Use known symbols for SOF
-                    error = (tmp_val * sof->symbols[i].conj()).phase();
-                else // Use QPSK costas loop since we don't know MODCOD yet
-                    error = (math::step(tmp_val.re) * tmp_val.im) - (math::step(tmp_val.im) * tmp_val.re);
-
-                // We're done, convert to proper 45 degs BPSK
+                error = (math::step(tmp_val.re) * tmp_val.im) - (math::step(tmp_val.im) * tmp_val.re);
                 out[i] = ((i & 1) ? complex_t{-tmp_val.re, tmp_val.im} : complex_t{tmp_val.im, tmp_val.re});
                 pcl.advance(error);
             }
+            pcl.phase += pcl.freq * (count-91);
+            pcl.advance(0);
             // Decode PLS. TODO: check if it actually does R-M decoding
             int best_header = 0;
             {

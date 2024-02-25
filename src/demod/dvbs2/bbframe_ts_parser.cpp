@@ -137,9 +137,8 @@ namespace dsp {
                 BBHeader header(bbf);
 
                 // Validate header
-                if (header.dfl > max_dfl) {
+                if (header.dfl > max_dfl || header.syncd >= header.dfl-8) {
                     synched = false;
-                    // printf("DFL TOO LONG %d\n");
                     // logger->info("DFL Too long!");
                     continue;
                 }
@@ -174,7 +173,7 @@ namespace dsp {
                 bbproc++;
                 if(header.ts_gs == 0b11) {
                     //MPEGTS
-                    while (df_remaining >= TS_SIZE && out_p < buffer_outsize) {
+                    while (df_remaining >= TS_SIZE && (buffer_outsize-out_p > TS_SIZE)) {
                         // printf("IT DFR=%d OUTP=%d/%d\n", df_remaining, out_p, buffer_outsize);
                         uint8_t* curptr = 0;
                         if(count > 0) {
@@ -196,80 +195,16 @@ namespace dsp {
                         // bool crc_valid = (pack_crc == rx_crc);
                         tsframes[out_p] = TS_SYNC_BYTE;
                         memcpy(&tsframes[out_p+1], curptr, TS_SIZE-1);
-                        // if(!crc_valid) {
-                        //     tsframes[out_p+1] |= TS_ERROR_INDICATOR;
-                        //     errors++;
-                        // }
                         out_p += TS_SIZE;
-                        // if (count == 0) {
-                        //     crc = 0;
-                        //     if (index == TS_SIZE) {
-                        //         memcpy(&tsframes[out_p], packet, TS_SIZE);
-                        //         out_p += TS_SIZE;
-                        // 
-                        //         index = 0;
-                        //         spanning = false;
-                        //     }
-                        //     if (df_remaining < (TS_SIZE - 1)) {
-                        //         index = 0;
-                        //         packet[index++] = 0x47;
-                        //         spanning = true;
-                        //     } else {
-                        //         tsframes[out_p++] = 0x47;
-                        //         tei_p = out_p;
-                        //     }
-                        // 
-                        //     count++;
-                        // 
-                        //     if (crc_check == true) {
-                        //         if (distance != (unsigned int)header.syncd / 8)
-                        //             synched = false;
-                        // 
-                        //         crc_check = false;
-                        //     }
-                        // } else if (count == TS_SIZE) {
-                        //     tmp = bbf[in_p++];
-                        // 
-                        //     if (tmp != crc) {
-                        //         errors++;
-                        // 
-                        //         if (spanning)
-                        //             packet[1] |= TS_ERROR_INDICATOR;
-                        //         else
-                        //             tsframes[tei_p] |= TS_ERROR_INDICATOR;
-                        //     }
-                        // 
-                        //     count = 0;
-                        //     df_remaining -= 1;
-                        // 
-                        //     if (df_remaining == 0)
-                        //         distance = (TS_SIZE - 1);
-                        // }
-                        // if (df_remaining >= 1 && count > 0) {
-                        //     tmp = bbf[in_p++];
-                        //     distance += 1;
-                        // 
-                        //     crc = crc_tab[tmp ^ crc];
-                        //     if (spanning == true) {
-                        //         packet[index++] = tmp;
-                        //     } else {
-                        //         tsframes[out_p++] = tmp;
-                        //     }
-                        // 
-                        //     count++;
-                        //     df_remaining -= 1;
-                        // 
-                        //     if (df_remaining == 0)
-                        //         distance = 0;
-                        // }
                     }
                     if(df_remaining > 0) {
                         count = df_remaining;
                         memcpy(packet_reassembly, bbf, df_remaining);
                         bbf += df_remaining;
                     }
-                    if(out_p >= buffer_outsize) {
+                    if(buffer_outsize - out_p <= TS_SIZE) {
                         printf("BUFF OVF!\n");
+                        break;
                     }
                 } else if(header.ts_gs == 0b00) {
                     //GSE?

@@ -34,6 +34,7 @@ namespace dsp {
             _omega = omega;
             offset = 0;
             pcl.phase = 0.0f;
+            _spsctr = 0;
             pcl.freq = _omega;
             pcl.setFreqLimits(_omega * (1.0 - _omegaRelLimit), _omega * (1.0 + _omegaRelLimit));
             base_type::tempStart();
@@ -80,6 +81,7 @@ namespace dsp {
             base_type::tempStop();
             offset = 0;
             pcl.phase = 0.0f;
+            _spsctr = 0;
             pcl.freq = _omega;
             base_type::tempStart();
         }

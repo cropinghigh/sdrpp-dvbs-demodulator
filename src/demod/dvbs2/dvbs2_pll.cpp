@@ -55,8 +55,8 @@ namespace dsp {
                             }
                         } 
                         if(pilotctr < 0) {
-                            // error = (descr * (complex_t{descr.re > 0 ? 0.707f : -0.707f, descr.im > 0 ? 0.707f : -0.707f}).conj()).phase();
-                            error = 0;
+                            error = (descr * (complex_t{descr.re > 0 ? 0.707f : -0.707f, descr.im > 0 ? 0.707f : -0.707f}).conj()).phase() / 10.0f;
+                            // error = 0;
                             out[i] = descr;
                             pilotctr--;
                             if(pilotctr <= -36) {

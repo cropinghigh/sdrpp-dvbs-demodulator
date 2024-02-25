@@ -63,14 +63,14 @@ const char* s2PilotsTxt[] = {
 
 #define DVBS2_DEMOD_SOF_THRES 0.6f
 #define DVBS2_DEMOD_LDPC_RETRIES 16
-#define CLOCK_RECOVERY_BW 0.0045f
+#define CLOCK_RECOVERY_BW 0.00628f
 #define CLOCK_RECOVERY_DAMPN_F 0.707f
 #define CLOCK_RECOVERY_REL_LIM 0.02f
 #define RRC_TAP_COUNT 65
 #define RRC_ALPHA 0.35f
-#define AGC_RATE 0.0004f
-#define COSTAS_LOOP_BANDWIDTH 0.0314f
-#define FLL_LOOP_BANDWIDTH 0.004f
+#define AGC_RATE 0.0001f
+#define COSTAS_LOOP_BANDWIDTH 0.00628f
+#define FLL_LOOP_BANDWIDTH 0.006f
 
 class DVBSDemodulatorModule : public ModuleManager::Instance {
 public:
@@ -409,7 +409,7 @@ private:
             ImGui::Columns(2, CONCAT("DVBS2CFGCols##_", _this->name), false);
             ImGui::Text("Demod params");ImGui::NextColumn();ImGui::Text("Modcod detected");ImGui::NextColumn();
             ImGui::Text("Constellation:");ImGui::SameLine();
-            if(_this->dvbs2_cfg.constellation < 4 && ImGui::Combo(CONCAT("##_dvbs2_constellation_sel_", _this->name), (int*)&_this->dvbs2_cfg.constellation, _this->s2ConstellationsListTxt.c_str())) {
+            if(_this->dvbs2_cfg.constellation >= 0 && _this->dvbs2_cfg.constellation < 4 && ImGui::Combo(CONCAT("##_dvbs2_constellation_sel_", _this->name), (int*)&_this->dvbs2_cfg.constellation, _this->s2ConstellationsListTxt.c_str())) {
                 _this->updateS2Demod();
                 config.acquire();
                 config.conf[_this->name]["dvbs2_constellation"] = _this->dvbs2_cfg.constellation;
@@ -417,7 +417,7 @@ private:
             }
             ImGui::NextColumn();ImGui::TextColored((modcod_consistent ? ImVec4(0.0, 1.0, 0.0, 1.0) : ImVec4(1.0, 0.0, 0.0, 1.0)), "%s", s2ConstellationsTxt[modcod_det.constellation]);ImGui::NextColumn();
             ImGui::Text("Coderate:");ImGui::SameLine();
-            if(_this->dvbs2_cfg.coderate < 12 && ImGui::Combo(CONCAT("##_dvbs2_coderate_sel_", _this->name), (int*)&_this->dvbs2_cfg.coderate, _this->s2CoderatesListTxt.c_str())) {
+            if(_this->dvbs2_cfg.coderate >= 0 && _this->dvbs2_cfg.coderate < 12 && ImGui::Combo(CONCAT("##_dvbs2_coderate_sel_", _this->name), (int*)&_this->dvbs2_cfg.coderate, _this->s2CoderatesListTxt.c_str())) {
                 _this->updateS2Demod();
                 config.acquire();
                 config.conf[_this->name]["dvbs2_coderate"] = _this->dvbs2_cfg.coderate;
@@ -433,7 +433,7 @@ private:
             }
             ImGui::NextColumn();ImGui::TextColored((modcod_consistent ? ImVec4(0.0, 1.0, 0.0, 1.0) : ImVec4(1.0, 0.0, 0.0, 1.0)), "%s", s2PilotsTxt[modcod_det.pilots]);ImGui::NextColumn();
             ImGui::Text("Frames:");ImGui::SameLine();
-            if(_this->dvbs2_cfg.framesize < 2 && ImGui::Combo(CONCAT("##_dvbs2_frames_sel_", _this->name), (int*)&_this->dvbs2_cfg.framesize, _this->s2FramesizesListTxt.c_str())) {
+            if(_this->dvbs2_cfg.framesize >= 0 && _this->dvbs2_cfg.framesize < 2 && ImGui::Combo(CONCAT("##_dvbs2_frames_sel_", _this->name), (int*)&_this->dvbs2_cfg.framesize, _this->s2FramesizesListTxt.c_str())) {
                 _this->updateS2Demod();
                 config.acquire();
                 config.conf[_this->name]["dvbs2_framesize"] = _this->dvbs2_cfg.framesize;
@@ -456,6 +456,7 @@ private:
                 avg_bestmatch += _this->dvbs2_pl_best_avg[i];
             }
             avg_bestmatch /= 0.3f;
+            // float avg_bestmatch = _this->dvbs2Demod.pl_sync_best_match * 100.0f;
             ImGui::Text("PLSync best match: %d", int(avg_bestmatch));
             ImGui::SameLine();
             ImGui::SigQualityMeter(avg_bestmatch, 20.0f, 100.0f);
@@ -520,8 +521,8 @@ private:
             _this->constDiag.releaseBuffer(std::min((uint32_t)count, CONSTDIAG_SIZE));
         } else {
             dsp::complex_t* cdBuff = _this->constDiag.acquireBuffer();
-            memcpy(cdBuff, &data[90], std::min((uint32_t)count/10-90, CONSTDIAG_SIZE) * sizeof(dsp::complex_t));
-            _this->constDiag.releaseBuffer(std::min((uint32_t)count/10-90, CONSTDIAG_SIZE));
+            memcpy(cdBuff, &data[90], std::min((uint32_t)count-90, CONSTDIAG_SIZE) * sizeof(dsp::complex_t));
+            _this->constDiag.releaseBuffer(std::min((uint32_t)count-90, CONSTDIAG_SIZE));
             cdBuff = _this->constDiag.acquireRedBuffer();
             memcpy(cdBuff, &data[0], 90 * sizeof(dsp::complex_t));
             _this->constDiag.releaseRedBuffer(90);

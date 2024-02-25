@@ -34,6 +34,7 @@ namespace dsp {
             _omega = omega;
             offset = 0;
             pcl.phase = 0.0f;
+            _spsctr = 0;
             pcl.freq = _omega;
             pcl.setFreqLimits(_omega * (1.0 - _omegaRelLimit), _omega * (1.0 + _omegaRelLimit));
             base_type::tempStart();
@@ -81,6 +82,7 @@ namespace dsp {
             offset = 0;
             pcl.phase = 0.0f;
             pcl.freq = _omega;
+            _spsctr = 0;
             base_type::tempStart();
         }
 
@@ -100,27 +102,29 @@ namespace dsp {
                 volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&outVal, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase], _interpTapCount);
                 out[outCount++] = outVal;
 
-                // Calculate derivative of the signal
-                if (phase == 0) {
-                    complex_t fT1;
-                    volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase+1], _interpTapCount);
-                    dfdt = (fT1 - outVal);
-                }
-                else if (phase == _interpPhaseCount - 1) {
-                    complex_t fT_1;
-                    volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT_1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase-1], _interpTapCount);
-                    dfdt = (outVal - fT_1);
-                }
-                else {
-                    complex_t fT_1;
-                    complex_t fT1;
-                    volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase+1], _interpTapCount);
-                    volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT_1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase-1], _interpTapCount);
-                    dfdt = ((fT1 - fT_1) * 0.5f);
-                }
                 if(_spsctr == 0) {
+                    // Calculate derivative of the signal
+                    if (phase == 0) {
+                        complex_t fT1, fT2;
+                        volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase+1], _interpTapCount);
+                        volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT2, (lv_32fc_t*)&buffer[offset], interpBank.phases[_interpPhaseCount-1], _interpTapCount);
+                        dfdt = fT1 - outVal;
+                    }
+                    else if (phase == _interpPhaseCount - 1) {
+                        complex_t fT_1;
+                        volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT_1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase-1], _interpTapCount);
+                        dfdt = outVal - fT_1;
+                    }
+                    else {
+                        complex_t fT_1;
+                        complex_t fT1;
+                        volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase+1], _interpTapCount);
+                        volk_32fc_32f_dot_prod_32fc((lv_32fc_t*)&fT_1, (lv_32fc_t*)&buffer[offset], interpBank.phases[phase-1], _interpTapCount);
+                        dfdt = (fT1 - fT_1) * 0.5f;
+                    }
                     // Calculate error
-                    error = - ((outVal.re * dfdt.re) + (outVal.im * dfdt.im));
+                    // error = -((outVal.re * dfdt.re) + (outVal.im * dfdt.im));
+                    error = -(((outVal.re > 0 ? 1.0f : -1.0f) * dfdt.re) + ((outVal.im > 0 ? 1.0f : -1.0f) * dfdt.im));
                 } else {
                     error = 0;
                 }

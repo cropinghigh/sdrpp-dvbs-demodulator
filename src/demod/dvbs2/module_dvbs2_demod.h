@@ -35,6 +35,7 @@
 #include "common/dsp/demod/freq_shift.h"
 #include "common/dsp/demod/complex_fd.h"
 #include "common/dsp/demod/gardner.h"
+#include "common/dsp/demod/lms.h"
 #include "dvbs2_fed.h"
 #include "dvbs2_plhdr_demod.h"
 
@@ -92,8 +93,16 @@ namespace dsp {
             FreqShift freqShift;
             filter::FIR<complex_t, float> rrc;
             // clock_recovery::MM<complex_t> recov; //works worse than FD
-            clock_recovery::COMPLEX_FD recov;
-            // clock_recovery::Gardner recov;
+            // clock_recovery::COMPLEX_FD recov;
+            clock_recovery::Gardner recov;
+            // equalizer::LMS lms;
+            bool cr_samp = false;
+            bool debug_sync = false;
+            int debug_ctr = 0;
+            int debug_rst_ctr = 0;
+            int debug_sync_b, debug_sync_g_b = 0;
+            int debug_sync_err, debug_sync_g_err = 0;
+            uint8_t debug_buff[65536];
             dvbs2::S2PLSyncBlock pl_sync;
             dvbs2::S2PLHDRDemod plhdr_demod;
             dvbs2::S2PLLBlock s2_pll;

@@ -26,11 +26,11 @@ namespace dsp {
         public:
             Gardner() {}
 
-            Gardner(stream<complex_t>* in, double omega, double omegaGain, double muGain, double omegaRelLimit, int outSps, int interpPhaseCount = 256, int interpTapCount = 256) { init(in, omega, omegaGain, muGain, omegaRelLimit, outSps, interpPhaseCount, interpTapCount); }
+            Gardner(stream<complex_t>* in, double omega, double omegaGain, double muGain, double omegaRelLimit, int outSps, int interpPhaseCount = 128, int interpTapCount = 8) { init(in, omega, omegaGain, muGain, omegaRelLimit, outSps, interpPhaseCount, interpTapCount); }
 
             ~Gardner();
 
-            void init(stream<complex_t>* in, double omega, double omegaGain, double muGain, double omegaRelLimit, int outSps, int interpPhaseCount = 256, int interpTapCount = 256);
+            void init(stream<complex_t>* in, double omega, double omegaGain, double muGain, double omegaRelLimit, int outSps, int interpPhaseCount = 128, int interpTapCount = 8);
             void setOmega(double omega);
             void setOmegaGain(double omegaGain);
             void setMuGain(double muGain);

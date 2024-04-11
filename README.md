@@ -13,18 +13,18 @@ VFO->QPSK Demodulator(AGC->FLL->RRC->Maximum Likelihood(y[n]y'[n]) timing recove
 
 DVB-S2
 
-VFO->AGC->FLL->RRC->Maximum Likelihood(y[n]y'[n]) timing recovery->PL Sync->PLL->Symbols to soft->LDPC decoder->BCH decoder->Descrambler->Frame parser->GSE to GRE packer/TS reassembly->UDP sender
-           ^                                                                 |
            |-------------------FREQUENCY FEEDBACK----------------------------|
+
+           |                                                                 ^
+
+VFO->AGC->FLL->RRC->Maximum Likelihood(y[n]y'[n]) timing recovery->PL Sync->PLL->Symbols to soft->LDPC decoder->BCH decoder->Descrambler->Frame parser->GSE to GRE packer/TS reassembly->UDP sender
+
 
 Building:
 
-  1.  Install SDR++ core headers to /usr/include/sdrpp_core/, if not installed (sdrpp-headers-git package for arch-like systems)
+  1.  Install SDR++ core headers to /usr/include/sdrpp_core/, if not installed. Refer to sdrpp-headers-git AUR package PKGBUILD on instructions how to do that
 
-          git clone https://github.com/AlexandreRouma/SDRPlusPlus.git
-          cd "SDRPlusPlus/core/src"
-          sudo mkdir -p "/usr/include/sdrpp_core"
-          sudo find . -regex ".*\.\(h\|hpp\)" -exec cp --parents \{\} "/usr/include/sdrpp_core" \;
+      OR if you don't want to use my header system, add -DSDRPP_MODULE_CMAKE="/path/to/sdrpp_build_dir/sdrpp_module.cmake" to cmake launch arguments
 
   2.  Build:
 

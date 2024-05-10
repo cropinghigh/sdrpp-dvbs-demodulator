@@ -19,10 +19,13 @@ DVB-S2
 
 VFO->AGC->FLL->RRC->Maximum Likelihood(y[n]y'[n]) timing recovery->PL Sync->PLL->Symbols to soft->LDPC decoder->BCH decoder->Descrambler->Frame parser->GSE to GRE packer/TS reassembly->UDP sender
 
+Binary installing:
+
+Visit the Actions page, find latest commit build artifacts, download dvbs_demodulator.so and put it to /usr/lib/sdrpp/plugins/, skipping to the step 3.
 
 Building:
 
-  1.  Install SDR++ core headers to /usr/include/sdrpp_core/, if not installed. Refer to sdrpp-headers-git AUR package PKGBUILD on instructions how to do that
+  1.  Install SDR++ core headers to /usr/include/sdrpp_core/, if not installed. Refer to https://cropinghigh.github.io/sdrpp-moduledb/headerguide.html about how to do that
 
       OR if you don't want to use my header system, add -DSDRPP_MODULE_CMAKE="/path/to/sdrpp_build_dir/sdrpp_module.cmake" to cmake launch arguments
 
@@ -34,7 +37,7 @@ Building:
           make
           sudo make install
 
-  4.  Enable new module in Module manager
+  3.  Enable new module in Module manager
 
 Usage:
 
